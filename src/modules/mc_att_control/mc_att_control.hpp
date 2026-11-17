@@ -85,18 +85,18 @@ private:
 	void Run() override;
 
 	/**
-	 * initialize some vectors/matrices from parameters
+	 * 根据参数初始化部分向量和矩阵
 	 */
 	void parameters_updated();
 
 	float throttle_curve(float throttle_stick_input);
 
 	/**
-	 * Generate & publish an attitude setpoint from stick inputs
+	 * 根据摇杆输入生成并发布姿态目标值
 	 */
 	void generate_attitude_setpoint(const matrix::Quatf &q, float dt);
 
-	AttitudeControl _attitude_control; /**< class for attitude control calculations */
+	AttitudeControl _attitude_control; /**< 用于姿态控制计算的类 */
 	StickYaw _stick_yaw{this};
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
@@ -112,33 +112,33 @@ private:
 
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 
-	uORB::Publication<vehicle_rates_setpoint_s>     _vehicle_rates_setpoint_pub{ORB_ID(vehicle_rates_setpoint)};    /**< rate setpoint publication */
+	uORB::Publication<vehicle_rates_setpoint_s>     _vehicle_rates_setpoint_pub{ORB_ID(vehicle_rates_setpoint)};    /**< 角速度目标值发布器 */
 	uORB::Publication<vehicle_attitude_setpoint_s>  _vehicle_attitude_setpoint_pub;
 
-	manual_control_setpoint_s       _manual_control_setpoint {};    /**< manual control setpoint */
-	vehicle_control_mode_s          _vehicle_control_mode {};       /**< vehicle control mode */
+	manual_control_setpoint_s       _manual_control_setpoint {};    /**< 手动控制目标值 */
+	vehicle_control_mode_s          _vehicle_control_mode {};       /**< 飞行器控制模式 */
 
-	perf_counter_t  _loop_perf;             /**< loop duration performance counter */
+	perf_counter_t  _loop_perf;             /**< 控制循环耗时的性能计数器 */
 
-	matrix::Vector3f _thrust_setpoint_body; /**< body frame 3D thrust vector */
+	matrix::Vector3f _thrust_setpoint_body; /**< 机体系中的三维推力向量 */
 
 	float _hover_thrust_estimate{NAN};
 	SlewRate<float> _hover_thrust_slew_rate{.5f};
 
 	float _yaw_setpoint_stabilized{0.f};
-	bool _heading_good_for_control{true}; // initialized true to have heading lock when local position never published
-	float _unaided_heading{NAN}; // initialized NAN to not distract heading lock when local position never published
-	float _man_tilt_max{0.f};			/**< maximum tilt allowed for manual flight [rad] */
+	bool _heading_good_for_control{true}; // 初始化为 true，使未曾发布局部位置消息时也能保持航向锁定
+	float _unaided_heading{NAN}; // 初始化为 NAN，避免未曾发布局部位置消息时干扰航向锁定
+	float _man_tilt_max{0.f};			/**< 手动飞行允许的最大倾斜角 [rad] */
 
-	SlewRate<float> _manual_throttle_minimum{0.f}; ///< 0 when landed and ramped to MPC_MANTHR_MIN in air
-	SlewRate<float> _manual_throttle_maximum{0.f}; ///< 0 when disarmed ramped to 1 when spooled up
+	SlewRate<float> _manual_throttle_minimum{0.f}; ///< 着陆时为 0，飞行中逐渐升至 MPC_MANTHR_MIN
+	SlewRate<float> _manual_throttle_maximum{0.f}; ///< 未解锁时为 0，电机完成起转后逐渐升至 1
 	AlphaFilter<float> _man_roll_input_filter;
 	AlphaFilter<float> _man_pitch_input_filter;
 
 	hrt_abstime _last_run{0};
 	hrt_abstime _last_attitude_setpoint{0};
 
-	bool _spooled_up{false}; ///< used to make sure the vehicle cannot take off during the spoolup time
+	bool _spooled_up{false}; ///< 用于确保飞行器在电机起转等待时间内不能起飞
 	bool _landed{true};
 	bool _vehicle_type_rotary_wing{true};
 	bool _vtol{false};
@@ -160,7 +160,7 @@ private:
 		(ParamFloat<px4::params::MC_PITCHRATE_MAX>) _param_mc_pitchrate_max,
 		(ParamFloat<px4::params::MC_YAWRATE_MAX>)   _param_mc_yawrate_max,
 
-		/* Stabilized mode params */
+		/* 自稳模式参数 */
 		(ParamFloat<px4::params::MAN_DEADZONE>) _param_man_deadzone,
 		(ParamFloat<px4::params::MPC_MAN_TILT_MAX>) _param_mpc_man_tilt_max,
 		(ParamFloat<px4::params::MPC_MANTHR_MIN>) _param_mpc_manthr_min,

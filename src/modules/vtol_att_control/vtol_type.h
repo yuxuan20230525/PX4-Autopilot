@@ -270,7 +270,7 @@ protected:
 
 	static constexpr const int num_outputs_max = 8;
 
-	struct vehicle_attitude_s		*_v_att;				//vehicle attitude
+	struct vehicle_attitude_s		*_v_att;     			//vehicle attitude
 	struct vehicle_attitude_setpoint_s	*_v_att_sp;			//vehicle attitude setpoint
 	struct vehicle_attitude_setpoint_s *_mc_virtual_att_sp;	// virtual mc attitude setpoint
 	struct vehicle_attitude_setpoint_s *_fw_virtual_att_sp;	// virtual fw attitude setpoint

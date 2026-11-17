@@ -33,7 +33,7 @@
 
 /**
  * @file mc_att_control_main.cpp
- * Multicopter attitude controller.
+ * 多旋翼姿态控制器。
  *
  * @author Lorenz Meier		<lorenz@px4.io>
  * @author Anton Babushkin	<anton.babushkin@me.com>
@@ -61,11 +61,11 @@ MulticopterAttitudeControl::MulticopterAttitudeControl(bool vtol) :
 	_vtol(vtol)
 {
 	parameters_updated();
-	// Rate of change 5% per second -> 1.6 seconds to ramp to default 8% MPC_MANTHR_MIN
+	// 变化速率为每秒 5% -> 渐变至 MPC_MANTHR_MIN 的默认值 8% 需要 1.6 秒
 	_manual_throttle_minimum.setSlewRate(0.05f);
-	// Rate of change 50% per second -> 2 seconds to ramp to 100%
+	// 变化速率为每秒 50% -> 渐变至 100% 需要 2 秒
 	_manual_throttle_maximum.setSlewRate(0.5f);
-	// Rate of change 5% per second -> 6 seconds to ramp 30% if hover thrust parameter is off
+	// 变化速率为每秒 5% -> 若悬停推力参数不准确，渐变 30% 需要 6 秒
 	_hover_thrust_slew_rate.setSlewRate(0.05f);
 }
 
@@ -88,16 +88,16 @@ MulticopterAttitudeControl::init()
 void
 MulticopterAttitudeControl::parameters_updated()
 {
-	// Store some of the parameters in a more convenient way & precompute often-used values
+	// 以更便于使用的形式保存部分参数，并预先计算常用值
 	_attitude_control.setProportionalGain(Vector3f(_param_mc_roll_p.get(), _param_mc_pitch_p.get(), _param_mc_yaw_p.get()),
 					      _param_mc_yaw_weight.get());
 
-	// angular rate limits
+	// 角速度限制
 	using math::radians;
 	_attitude_control.setRateLimit(Vector3f(radians(_param_mc_rollrate_max.get()), radians(_param_mc_pitchrate_max.get()),
 						radians(_param_mc_yawrate_max.get())));
 
-	// Update from hover thrust parameter if there's no valid estimate in use
+	// 若当前未使用有效估计值，则根据悬停推力参数更新
 	if (!PX4_ISFINITE(_hover_thrust_estimate)) {
 		_hover_thrust_slew_rate.setForcedValue(_param_mpc_thr_hover.get());
 	}
@@ -110,20 +110,20 @@ MulticopterAttitudeControl::throttle_curve(float throttle_stick_input)
 {
 	float thrust = 0.f;
 
-	// throttle_stick_input is in range [-1, 1]
+	// throttle_stick_input 的取值范围为 [-1, 1]
 	switch (_param_mpc_thr_curve.get()) {
-	case 1: // no rescaling
+	case 1: // 不进行额外重缩放
 		thrust = math::interpolate(throttle_stick_input, -1.f, 1.f,
 					   _manual_throttle_minimum.getState(), _param_mpc_thr_max.get());
 		break;
 
-	case 2: // rescale to hover thrust param at 0 stick input
+	case 2: // 重新缩放，使摇杆输入为 0 时对应悬停推力参数值
 		thrust = math::interpolateNXY(throttle_stick_input,
 		{-1.f, 0.f, 1.f},
 		{_manual_throttle_minimum.getState(), _param_mpc_thr_hover.get(), _param_mpc_thr_max.get()});
 		break;
 
-	default: // 0 or other: rescale to HTE value
+	default: // 0 或其他值：重新缩放至悬停推力估计（HTE）值
 		thrust = math::interpolateNXY(throttle_stick_input,
 		{-1.f, 0.f, 1.f},
 		{_manual_throttle_minimum.getState(), _hover_thrust_slew_rate.getState(), _param_mpc_thr_max.get()});
@@ -138,7 +138,7 @@ MulticopterAttitudeControl::generate_attitude_setpoint(const Quatf &q, float dt)
 {
 	vehicle_attitude_setpoint_s attitude_setpoint{};
 
-	// Avoid accumulating absolute yaw error with arming stick gesture
+	// 避免执行摇杆解锁动作时累积绝对偏航误差
 	const bool arming_gesture = (_manual_control_setpoint.throttle < -.9f) && (_param_mc_airmode.get() != 2);
 
 	if (arming_gesture || !_heading_good_for_control) {
@@ -151,46 +151,46 @@ MulticopterAttitudeControl::generate_attitude_setpoint(const Quatf &q, float dt)
 				       _unaided_heading);
 
 	/*
-	 * Input mapping for roll & pitch setpoints
+	 * 横滚和俯仰目标值的输入映射
 	 * ----------------------------------------
-	 * We control the following 2 angles:
-	 * - tilt angle, given by sqrt(roll*roll + pitch*pitch)
-	 * - the direction of the maximum tilt in the XY-plane, which also defines the direction of the motion
+	 * 我们控制以下两个角度：
+	 * - 倾斜角，由 sqrt(roll*roll + pitch*pitch) 给出
+	 * - XY 平面内的最大倾斜方向，它也决定运动方向
 	 *
-	 * This allows a simple limitation of the tilt angle, the vehicle flies towards the direction that the stick
-	 * points to, and changes of the stick input are linear.
+	 * 这样便于对倾斜角限幅，飞行器沿摇杆所指的方向
+	 * 飞行，且摇杆输入的变化呈线性映射。
 	 */
 	_man_roll_input_filter.setParameters(dt, _param_mc_man_tilt_tau.get());
 	_man_pitch_input_filter.setParameters(dt, _param_mc_man_tilt_tau.get());
 
-	// we want to fly towards the direction of (roll, pitch)
+	// 希望沿 (roll, pitch) 所指的方向飞行
 	Vector2f v = Vector2f(_man_roll_input_filter.update(_manual_control_setpoint.roll * _man_tilt_max),
 			      -_man_pitch_input_filter.update(_manual_control_setpoint.pitch * _man_tilt_max));
-	float v_norm = v.norm(); // the norm of v defines the tilt angle
+	float v_norm = v.norm(); // v 的模长决定倾斜角
 
-	if (v_norm > _man_tilt_max) { // limit to the configured maximum tilt angle
+	if (v_norm > _man_tilt_max) { // 限制在配置的最大倾斜角以内
 		v *= _man_tilt_max / v_norm;
 	}
 
 	Quatf q_sp_rp = AxisAnglef(v(0), v(1), 0.f);
-	// Make sure there's a valid attitude quaternion with no yaw error when yaw is unlocked (NAN)
+	// 航向未锁定（NAN）时，确保姿态四元数有效且不存在偏航误差
 	const float yaw_setpoint = PX4_ISFINITE(_yaw_setpoint_stabilized) ? _yaw_setpoint_stabilized : yaw;
-	// The axis angle can change the yaw as well (noticeable at higher tilt angles).
-	// This is the formula by how much the yaw changes:
-	//   let a := tilt angle, b := atan(y/x) (direction of maximum tilt)
+	// 轴角表示也可能改变偏航角（倾斜角较大时更明显）。
+	// 偏航角变化量由下式给出：
+	//   设 a := 倾斜角，b := atan(y/x)（最大倾斜方向）
 	//   yaw = atan(-2 * sin(b) * cos(b) * sin^2(a/2) / (1 - 2 * cos^2(b) * sin^2(a/2))).
 	const Quatf q_sp_yaw(cosf(yaw_setpoint / 2.f), 0.f, 0.f, sinf(yaw_setpoint / 2.f));
 
 	if (_vtol) {
-		// Modify the setpoints for roll and pitch such that they reflect the user's intention even
-		// if a large yaw error(yaw_sp - yaw) is present. In the presence of a yaw error constructing
-		// an attitude setpoint from the yaw setpoint will lead to unexpected attitude behaviour from
-		// the user's view as the tilt will not be aligned with the heading of the vehicle.
+		// 调整横滚和俯仰目标值，使其即便存在较大的偏航误差
+		// (yaw_sp - yaw) 仍能反映用户意图。存在偏航误差时，根据
+		// 偏航目标值构造姿态目标值，会因倾斜方向与飞行器航向不一致，
+		// 而在用户看来产生非预期的姿态行为。
 
 		AttitudeControlMath::correctTiltSetpointForYawError(q_sp_rp, q, q_sp_yaw);
 	}
 
-	// Align the desired tilt with the yaw setpoint
+	// 使期望倾斜方向与偏航目标值对齐
 	Quatf q_sp = q_sp_yaw * q_sp_rp;
 
 	q_sp.copyTo(attitude_setpoint.q_d);
@@ -205,16 +205,16 @@ void
 MulticopterAttitudeControl::Run()
 {
 	if (should_exit()) {
-		_vehicle_attitude_sub.unregisterCallback();
+		_vehicle_attitude_sub.unregisterCallback();//注销通知
 		exit_and_cleanup();
 		return;
 	}
 
-	perf_begin(_loop_perf);
+	perf_begin(_loop_perf);//统计耗时
 
-	// Check if parameters have changed
+	// 检查参数是否发生变化
 	if (_parameter_update_sub.updated()) {
-		// clear update
+		// 清除更新标志
 		parameter_update_s param_update;
 		_parameter_update_sub.copy(&param_update);
 
@@ -222,7 +222,7 @@ MulticopterAttitudeControl::Run()
 		parameters_updated();
 	}
 
-	// Update hover thrust for stick scaling
+	// 更新用于摇杆输入缩放的悬停推力
 	if (_hover_thrust_estimate_sub.updated()) {
 		hover_thrust_estimate_s hover_thrust_estimate;
 
@@ -231,24 +231,24 @@ MulticopterAttitudeControl::Run()
 				_hover_thrust_estimate = math::constrain(hover_thrust_estimate.hover_thrust, .05f, .9f);
 
 			} else {
-				// Possibly bad estimate before it got invalid, slew back to parameter
+				// 估计值在失效前可能已不准确，按变化速率限制逐渐回到参数值
 				_hover_thrust_estimate = _param_mpc_thr_hover.get();
 			}
 		}
 	}
 
-	// run controller on attitude updates
+	// 姿态消息更新时运行控制器
 	vehicle_attitude_s v_att;
 
 	if (_vehicle_attitude_sub.update(&v_att)) {
 
-		// Guard against too small (< 0.2ms) and too large (> 20ms) dt's.
+		// 避免 dt 过小（< 0.2ms）或过大（> 20ms）。
 		const float dt = math::constrain(((v_att.timestamp_sample - _last_run) * 1e-6f), 0.0002f, 0.02f);
 		_last_run = v_att.timestamp_sample;
 
 		const Quatf q{v_att.q};
 
-		/* check for updates in other topics */
+		/* 检查其他 Topic 是否有更新 */
 		_manual_control_setpoint_sub.update(&_manual_control_setpoint);
 		_vehicle_control_mode_sub.update(&_vehicle_control_mode);
 
@@ -283,7 +283,7 @@ MulticopterAttitudeControl::Run()
 			}
 		}
 
-		// during transitions VTOL module generates attitude setpoints
+		// 过渡飞行期间由垂直起降（VTOL）模块生成姿态目标值
 		const bool is_hovering = (_vehicle_type_rotary_wing && !_vtol_in_transition_mode);
 		const bool is_tailsitter_transition = (_vtol_tailsitter && _vtol_in_transition_mode);
 
@@ -291,7 +291,7 @@ MulticopterAttitudeControl::Run()
 					  && (is_hovering || is_tailsitter_transition);
 
 		if (run_att_ctrl) {
-			// Generate the attitude setpoint from stick inputs if we are in Manual/Stabilized mode
+			// 若处于手动/自稳（Manual/Stabilized）模式，则根据摇杆输入生成姿态目标值
 			if (_vehicle_control_mode.flag_control_manual_enabled &&
 			    !_vehicle_control_mode.flag_control_altitude_enabled &&
 			    !_vehicle_control_mode.flag_control_velocity_enabled &&
@@ -306,7 +306,7 @@ MulticopterAttitudeControl::Run()
 				_stick_yaw.reset(Eulerf(q).psi(), _unaided_heading);
 			}
 
-			// Check for new attitude setpoint
+			// 检查是否有新的姿态目标值
 			if (_vehicle_attitude_setpoint_sub.updated()) {
 				vehicle_attitude_setpoint_s vehicle_attitude_setpoint;
 
@@ -319,12 +319,12 @@ MulticopterAttitudeControl::Run()
 				}
 			}
 
-			// Check for a heading reset
+			// 检查航向是否发生重置
 			if (_quat_reset_counter != v_att.quat_reset_counter) {
 				const Quatf delta_q_reset(v_att.delta_q_reset);
 				const float delta_psi = Eulerf(delta_q_reset).psi();
 
-				// Only offset the yaw setpoint when the heading is locked
+				// 仅在航向锁定时对偏航目标值施加偏移
 				if (PX4_ISFINITE(_yaw_setpoint_stabilized)) {
 					_yaw_setpoint_stabilized = wrap_pi(_yaw_setpoint_stabilized + delta_psi);
 				}
@@ -332,7 +332,7 @@ MulticopterAttitudeControl::Run()
 				_stick_yaw.ekfResetHandler(delta_psi);
 
 				if (v_att.timestamp > _last_attitude_setpoint) {
-					// adapt existing attitude setpoint unless it was generated after the current attitude estimate
+					// 调整现有姿态目标值，除非它生成于当前姿态估计之后
 					_attitude_control.adaptAttitudeSetpoint(delta_q_reset);
 				}
 
@@ -354,7 +354,7 @@ MulticopterAttitudeControl::Run()
 				}
 			}
 
-			// publish rate setpoint
+			// 发布角速度目标值
 			vehicle_rates_setpoint_s rates_setpoint{};
 			rates_setpoint.roll = rates_sp(0);
 			rates_setpoint.pitch = rates_sp(1);
@@ -462,7 +462,7 @@ https://www.research-collection.ethz.ch/bitstream/handle/20.500.11850/154099/eth
 
 
 /**
- * Multicopter attitude control app start / stop handling function
+ * 多旋翼姿态控制应用的启动/停止处理函数
  */
 extern "C" __EXPORT int mc_att_control_main(int argc, char *argv[])
 {

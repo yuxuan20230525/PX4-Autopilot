@@ -33,16 +33,16 @@
 
 /**
  * @file mc_att_control_params.c
- * Parameters for multicopter attitude controller.
+ * 多旋翼姿态控制器参数。
  *
  * @author Lorenz Meier <lorenz@px4.io>
  * @author Anton Babushkin <anton@px4.io>
  */
 
 /**
- * Roll P gain
+ * 横滚 P 增益
  *
- * Roll proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
+ * 横滚比例增益，即姿态误差为 1 rad 时的角速度目标值，单位为 rad/s。
  *
  * @min 0.0
  * @max 12
@@ -53,9 +53,9 @@
 PARAM_DEFINE_FLOAT(MC_ROLL_P, 4.0f);
 
 /**
- * Pitch P gain
+ * 俯仰 P 增益
  *
- * Pitch proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
+ * 俯仰比例增益，即姿态误差为 1 rad 时的角速度目标值，单位为 rad/s。
  *
  * @min 0.0
  * @max 12
@@ -66,9 +66,9 @@ PARAM_DEFINE_FLOAT(MC_ROLL_P, 4.0f);
 PARAM_DEFINE_FLOAT(MC_PITCH_P, 4.0f);
 
 /**
- * Yaw P gain
+ * 偏航 P 增益
  *
- * Yaw proportional gain, i.e. desired angular speed in rad/s for error 1 rad.
+ * 偏航比例增益，即姿态误差为 1 rad 时的角速度目标值，单位为 rad/s。
  *
  * @min 0.0
  * @max 5
@@ -79,14 +79,14 @@ PARAM_DEFINE_FLOAT(MC_PITCH_P, 4.0f);
 PARAM_DEFINE_FLOAT(MC_YAW_P, 2.8f);
 
 /**
- * Yaw weight
+ * 偏航权重
  *
- * A fraction [0,1] deprioritizing yaw compared to roll and pitch in non-linear attitude control.
- * Deprioritizing yaw is necessary because multicopters have much less control authority
- * in yaw compared to the other axes and it makes sense because yaw is not critical for
- * stable hovering or 3D navigation.
+ * 在非线性姿态控制中，相对横滚和俯仰降低偏航优先级的比例，范围为 [0,1]。
+ * 需要降低偏航优先级，是因为多旋翼在偏航方向的控制能力
+ * 远弱于其他轴；这样处理也合理，因为偏航并不是
+ * 稳定悬停或三维导航的关键。
  *
- * For yaw control tuning use MC_YAW_P. This ratio has no impact on the yaw gain.
+ * 偏航控制调参请使用 MC_YAW_P。该比例不影响偏航增益。
  *
  * @min 0.0
  * @max 1.0
@@ -97,14 +97,14 @@ PARAM_DEFINE_FLOAT(MC_YAW_P, 2.8f);
 PARAM_DEFINE_FLOAT(MC_YAW_WEIGHT, 0.4f);
 
 /**
- * Max roll rate
+ * 最大横滚角速度
  *
- * Limit for roll rate in manual and auto modes (except acro).
- * Has effect for large rotations in autonomous mode, to avoid large control
- * output and mixer saturation.
+ * 手动和自动模式下的横滚角速度限制（Acro 模式除外）。
+ * 在自主模式下发生大幅旋转时起作用，以避免过大的控制
+ * 输出和混控饱和。
  *
- * This is not only limited by the vehicle's properties, but also by the maximum
- * measurement rate of the gyro.
+ * 此限制不仅取决于飞行器本身的特性，还取决于陀螺仪
+ * 能够测量的最大角速度。
  *
  * @unit deg/s
  * @min 0.0
@@ -116,14 +116,14 @@ PARAM_DEFINE_FLOAT(MC_YAW_WEIGHT, 0.4f);
 PARAM_DEFINE_FLOAT(MC_ROLLRATE_MAX, 220.0f);
 
 /**
- * Max pitch rate
+ * 最大俯仰角速度
  *
- * Limit for pitch rate in manual and auto modes (except acro).
- * Has effect for large rotations in autonomous mode, to avoid large control
- * output and mixer saturation.
+ * 手动和自动模式下的俯仰角速度限制（Acro 模式除外）。
+ * 在自主模式下发生大幅旋转时起作用，以避免过大的控制
+ * 输出和混控饱和。
  *
- * This is not only limited by the vehicle's properties, but also by the maximum
- * measurement rate of the gyro.
+ * 此限制不仅取决于飞行器本身的特性，还取决于陀螺仪
+ * 能够测量的最大角速度。
  *
  * @unit deg/s
  * @min 0.0
@@ -135,7 +135,7 @@ PARAM_DEFINE_FLOAT(MC_ROLLRATE_MAX, 220.0f);
 PARAM_DEFINE_FLOAT(MC_PITCHRATE_MAX, 220.0f);
 
 /**
- * Max yaw rate
+ * 最大偏航角速度
  *
  * @unit deg/s
  * @min 0.0
@@ -147,9 +147,9 @@ PARAM_DEFINE_FLOAT(MC_PITCHRATE_MAX, 220.0f);
 PARAM_DEFINE_FLOAT(MC_YAWRATE_MAX, 200.0f);
 
 /**
- * Manual tilt input filter time constant
+ * 手动倾斜输入滤波器的时间常数
  *
- * Setting this parameter to 0 disables the filter
+ * 将此参数设为 0 可禁用滤波器
  *
  * @unit s
  * @min 0.0
